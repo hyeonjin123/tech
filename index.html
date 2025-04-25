@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>index</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      width: 100%;
+      background-color: #1A1511;
+      overflow: hidden;
+      font-family: 'Roboto Condensed', sans-serif;
+    }
+
+    .top-right {
+      position: fixed;
+      top: 25px;
+      right: 40px;
+      display: flex;
+      gap: 30px;
+      font-size: 15px;
+      color: white;
+      z-index: 20;
+      font-weight: 500;
+    }
+
+    .top-right a {
+      color: white;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+
+    .top-right a:hover { opacity: 0.5; }
+
+    .sound-button {
+      position: fixed;
+      bottom: 20px;
+      right: 40px;
+      font-size: 15px;
+      color: white;
+      cursor: pointer;
+      z-index: 20;
+      font-weight: 500;
+    }
+
+    .pov-home {
+      position: fixed;
+      top: 25px;
+      left: 40px;
+      font-size: 25px;
+      font-weight: 500;
+      color: white;
+      cursor: pointer;
+      z-index: 30;
+      transition: all 0.5s ease;
+    }
+
+    .video-corner {
+      position: fixed;
+      width: 640px;
+      height: 360px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .corner {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 2px solid white;
+      transition: all 0.5s ease;
+    }
+
+    .top-left     { top: 0; left: 0; border-right: none; border-bottom: none; }
+    .top-right-c  { top: 0; right: 0; border-left: none;  border-bottom: none; }
+    .bottom-left  { bottom: 0; left: 0; border-top: none; border-right: none; }
+    .bottom-right { bottom: 0; right: 0; border-left: none; border-top: none; }
+
+    .corner.expand.top-left     { transform: translate(-250px, -100px); }
+    .corner.expand.top-right-c  { transform: translate(250px, -100px); }
+    .corner.expand.bottom-left  { transform: translate(-250px, 100px); }
+    .corner.expand.bottom-right { transform: translate(250px, 100px); }
+
+    #bg-video-container {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      width: 640px;
+      height: 360px;
+      transform: translate(-50%, -50%);
+      overflow: hidden;
+      z-index: 2;
+      transition: all 1s ease;
+      cursor: pointer;
+    }
+
+    #bg-video-container.active {
+      width: 100vw;
+      height: 100vh;
+      transform: translate(-50%, -50%);
+    }
+
+    #bg-video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .progress-bar-wrapper {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 20%;
+      height: 1px;
+      background-color: rgba(255, 255, 255, 0.5);
+      z-index: 25;
+      display: none;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background-color: white;
+      width: 0%;
+    }
+
+    #bg-video-container.active + .progress-bar-wrapper {
+      display: block;
+    }
+
+    #film-panel {
+      position: fixed;
+      top: 0;
+      right: -100vw;
+      width: 100vw;
+      height: 100vh;
+      background-color: #1A1511;
+      z-index: 100;
+      transition: right 0.8s ease;
+      overflow: hidden;
+    }
+
+    #film-panel.show {
+      right: 0;
+    }
+
+    #film-panel iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sound-button" onclick="toggleMute()">
+    <span id="sound-label">SOUND OFF</span>
+  </div>
+
+  <div class="top-right">
+    <a href="#" id="film-link">FILM</a>
+    <a href="camera.html">CAMERA</a>
+  </div>
+
+  <div class="pov-home" id="pov">POV</div>
+
+  <div class="video-corner" id="video-corner">
+    <div class="corner top-left"></div>
+    <div class="corner top-right-c"></div>
+    <div class="corner bottom-left"></div>
+    <div class="corner bottom-right"></div>
+  </div>
+
+  <div id="bg-video-container" onclick="expandAndPlay()">
+    <video id="bg-video" loop muted>
+      <source src="video/episode0.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <div class="progress-bar-wrapper">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <div id="film-panel" onclick="closeFilmPanel(event)">
+    <iframe src="" id="film-iframe"></iframe>
+  </div>
+
+  <script>
+    const video = document.getElementById('bg-video');
+    const soundLabel = document.getElementById('sound-label');
+    const videoContainer = document.getElementById('bg-video-container');
+    const pov = document.getElementById('pov');
+    const progressBar = document.getElementById('progress-bar');
+    const corners = document.querySelectorAll('.corner');
+    const filmLink = document.getElementById('film-link');
+    const filmPanel = document.getElementById('film-panel');
+    const filmIframe = document.getElementById('film-iframe');
+
+    let isMuted = true; // 시작은 음소거
+    video.muted = true;
+    soundLabel.textContent = 'SOUND OFF';
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      video.muted = isMuted;
+      soundLabel.textContent = isMuted ? 'SOUND OFF' : 'SOUND ON';
+    }
+
+    let isExpanded = false;
+
+    function expandAndPlay() {
+      if (!isExpanded) {
+        corners.forEach(corner => corner.classList.add('expand'));
+        setTimeout(() => {
+          videoContainer.classList.add('active');
+          video.play();
+          isExpanded = true;
+        }, 500);
+      }
+    }
+
+    pov.addEventListener('click', () => {
+      video.pause();
+      video.currentTime = 0;
+      videoContainer.classList.remove('active');
+      corners.forEach(corner => corner.classList.remove('expand'));
+      isExpanded = false;
+    });
+
+    video.addEventListener('timeupdate', () => {
+      const percent = (video.currentTime / video.duration) * 100;
+      progressBar.style.width = percent + '%';
+    });
+
+    pov.addEventListener('mouseenter', () => {
+      pov.textContent = 'Point Of View';
+    });
+
+    pov.addEventListener('mouseleave', () => {
+      pov.textContent = 'POV';
+    });
+
+    filmLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      filmIframe.src = 'film.html';      filmPanel.classList.add('show');
+    });
+
+    function closeFilmPanel(e) {
+      if (e.target === filmPanel) {
+        filmPanel.classList.remove('show');
+        filmIframe.src = '';
+      }
+    }
+  </script>
+</body>
+</html>
